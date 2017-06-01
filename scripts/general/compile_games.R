@@ -3,16 +3,17 @@
 
 
 ## Dependencies
-require(RCurl); require(rjson); require(dplyr); require(lubridate); require(doMC); require(Kmisc); require(RSQLite)
-load("~/Documents/github/corsica/modules/user_functions.RData")
-load("~/Documents/github/corsica/modules/dryscrape.RData")
-load("~/Documents/github/corsica/modules/stats.RData")
+require(RCurl); require(rjson); require(dplyr); require(lubridate); 
+require(doMC); require(Kmisc); require(RSQLite)
+load("/srv/shiny-server/modules/user_functions.RData")
+load("/srv/shiny-server/modules/dryscrape.RData")
+load("/srv/shiny-server/modules/stats.RData")
 
 
 ## Compile games
 # Scrape
 game_list <- ds.compile_games(games = g,
-                              season = "20162017",
+                              season = "20142015",
                               try_tolerance = 5,
                               agents = ds.user_agents
                               )
@@ -26,7 +27,7 @@ media <- game_list[[4]]
 
 ## Write to database
 # Connect
-conn <- dbConnect(SQLite(), "~/Documents/corsica_data/raw.sqlite")
+conn <- dbConnect(SQLite(), "~/corsica_data/raw.sqlite")
 
 # Check for duplicates
 pbp_contains <- sqliteQuickColumn(conn,
