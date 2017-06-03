@@ -255,8 +255,8 @@ bind_rows(
                  tTOI:tNZS
                  ) %>%
           data.frame(),
-        by.x = c("season", "game_id", "venue", "game_strength_state"),
-        by.y = c("season", "game_id", "venue", "game_strength_state")
+        by.x = c("season", "game_id", "venue", "team", "game_strength_state"),
+        by.y = c("season", "game_id", "venue", "team", "game_strength_state")
         ) %>%
   data.frame() ->
   skater_stats_full

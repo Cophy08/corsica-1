@@ -13,33 +13,32 @@ load("/srv/shiny-server/models/xg_model.RData")
 load("/srv/shiny-server/models/adjustments_model.RData")
 
 
-## Switches
-current_season <- "20162017"
+## Query database
+# Select season
+games <- paste0("20150",
+                ds.all_games[c(1:665)],
+                sep = ""
+                )
 
+# Connect to database
+conn <- dbConnect(SQLite(), "~/corsica_data/raw.sqlite")
 
-## Scrape Games
-# Get schedule
-sched <- ds.scrape_schedule(Sys.Date() - 1,
-                            Sys.Date() - 1, 
-                            try_tolerance = 5, 
-                            agents = ds.user_agents
-                            )
+# Write query
+pbp_query <- dbSendQuery(conn,
+                         paste("SELECT * FROM pbp WHERE game_id IN (",
+                               paste(games,
+                                     collapse = ", "
+                                     ),
+                               ")",
+                               sep = ""
+                               )
+                         )
 
-# Get game list
-games <- substr(sched$game_id, 6, 10)
+# Fetch PBP
+pbp <- fetch(pbp_query, -1)
 
-# Compile games
-game_list <- ds.compile_games(games, 
-                              current_season, 
-                              try_tolerance = 5, 
-                              agents = ds.user_agents
-                              )
-
-# Unpack
-pbp <- game_list[[1]]
-shifts <- game_list[[2]]
-highlights <- game_list[[3]]
-media <- game_list[[4]]
+# Disconnect
+dbDisconnect(conn)
 
 # Enhance PBP
 pbp <- st.pbp_enhance(pbp)
@@ -828,83 +827,3 @@ dbWriteTable(conn,
 # Disconnect
 dbDisconnect(conn)
 
-
-## Write to database (Raw)
-# Unpack PBP
-pbp <- game_list[[1]]
-
-# Connect
-conn <- dbConnect(SQLite(), "~/corsica_data/raw.sqlite")
-
-# Check for duplicates
-pbp_contains <- sqliteQuickColumn(conn,
-                                  "pbp",
-                                  "game_id"
-                                  )
-
-pbp %>%
-  filter(game_id %in% unique(pbp_contains) == FALSE) %>%
-  data.frame() ->
-  pbp
-
-shifts_contains <- sqliteQuickColumn(conn,
-                                     "shifts",
-                                     "game_id"
-                                     )
-
-shifts %>%
-  filter(game_id %in% unique(shifts_contains) == FALSE) %>%
-  data.frame() ->
-  shifts
-
-highlights_contains <- sqliteQuickColumn(conn,
-                                         "highlights",
-                                         "game_id"
-                                         )
-
-highlights %>%
-  filter(game_id %in% unique(highlights_contains) == FALSE) %>%
-  data.frame() ->
-  highlights
-
-media_contains <- sqliteQuickColumn(conn,
-                                    "media",
-                                    "game_id"
-                                    )
-
-media %>%
-  filter(game_id %in% unique(media_contains) == FALSE) %>%
-  data.frame() ->
-  media
-
-# Write
-dbWriteTable(conn,
-             "pbp",
-             pbp,
-             overwrite = FALSE,
-             append = TRUE
-             )
-
-dbWriteTable(conn,
-             "shifts",
-             shifts,
-             overwrite = FALSE,
-             append = TRUE
-             )
-
-dbWriteTable(conn,
-             "highlights",
-             highlights,
-             overwrite = FALSE,
-             append = TRUE
-             )
-
-dbWriteTable(conn,
-             "media",
-             media,
-             overwrite = FALSE,
-             append = TRUE
-             )
-
-# Disconnect
-dbDisconnect(conn)

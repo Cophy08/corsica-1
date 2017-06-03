@@ -633,6 +633,7 @@ st.sum_skater <- function(x, venue) {
     
     x %>%
       summarise(venue = "Home",
+                team = first(home_team),
                 GP = length(unique(game_id)),
                 TOI = sum(event_length)/60,
                 CF = sum({event_type %in% st.fenwick_events & event_team == home_team} |
@@ -709,6 +710,7 @@ st.sum_skater <- function(x, venue) {
     
     x %>%
       summarise(venue = "Away",
+                team = first(away_team),
                 GP = length(unique(game_id)),
                 TOI = sum(event_length)/60,
                 CF = sum({event_type %in% st.fenwick_events & event_team == away_team} |
@@ -800,6 +802,7 @@ st.sum_goalie <- function(x, venue) {
     x %>%
       rename(player = home_goalie) %>%
       summarise(venue = "Home",
+                team = first(home_team),
                 GP = length(unique(game_id)),
                 TOI = sum(nabs(event_length))/60,
                 CA = sum(event_type %in% st.corsi_events & event_team == away_team),
@@ -816,6 +819,7 @@ st.sum_goalie <- function(x, venue) {
     x %>%
       rename(player = away_goalie) %>%
       summarise(venue = "Away",
+                team = first(away_team),
                 GP = length(unique(game_id)),
                 TOI = sum(nabs(event_length))/60,
                 CA = sum(event_type %in% st.corsi_events & event_team == home_team),
@@ -965,6 +969,7 @@ st.old_sum_skater <- function(x, venue) {
     
     x %>%
       summarise(venue = "Home",
+                team = first(home_team),
                 GP = length(unique(game_id)),
                 TOI = sum(nabs(Event.Length))/60,
                 CF = sum(event_type %in% st.corsi_events & event_team == home_team),
@@ -1035,6 +1040,7 @@ st.old_sum_skater <- function(x, venue) {
     
     x %>%
       summarise(venue = "Away",
+                team = first(away_team),
                 GP = length(unique(game_id)),
                 TOI = sum(nabs(Event.Length))/60,
                 CF = sum(event_type %in% st.corsi_events & event_team == away_team),
@@ -1120,6 +1126,7 @@ st.old_sum_goalie <- function(x, venue) {
     x %>%
       rename(player = home_goalie) %>%
       summarise(venue = "Home",
+                team = first(home_team),
                 GP = length(unique(game_id)),
                 TOI = sum(nabs(Event.Length))/60,
                 CA = sum(event_type %in% st.corsi_events & event_team == away_team),
@@ -1136,6 +1143,7 @@ st.old_sum_goalie <- function(x, venue) {
     x %>%
       rename(player = away_goalie) %>%
       summarise(venue = "Away",
+                team = first(away_team),
                 GP = length(unique(game_id)),
                 TOI = sum(nabs(Event.Length))/60,
                 CA = sum(event_type %in% st.corsi_events & event_team == home_team),
