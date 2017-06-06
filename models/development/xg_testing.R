@@ -1,12 +1,16 @@
 ### xG TESTING ###
-# Last edit: Manny (2017-05-06)
+# Last edit: Manny (2017-06-03)
 
 ## Dependencies
-require(dplyr); require(RSQLite); require(doMC); require(neuralnet); require(glmnet); require(Kmisc)
-load("~/Documents/github/corsica/modules/user_functions.RData")
-load("~/Documents/github/corsica/modules/stats.RData")
+require(dplyr); require(RSQLite); require(doMC)
+require(glmnet); require(Kmisc); require(keras);
+require(caret); require(xgboost)
+load("/srv/shiny-server/modules/user_functions.RData")
+load("/srv/shiny-server/modules/stats.RData")
+load("/srv/shiny-server/models/xg_model.RData")
+load("/srv/shiny-server/models/adjustments_model.RData")
 
-# load("~/Documents/github/corsica/models/development/xg_testing_data.RData")
+# load("/srv/shiny-server/models/development/xg_testing_data.RData")
 
 ## Functions
 # Meta
@@ -35,7 +39,7 @@ ftable2df <- function(mydata) {
 
 ## Load data
 # Connect to database
-conn <- dbConnect(SQLite(), "~/Documents/corsica_data/raw.sqlite")
+conn <- dbConnect(SQLite(), "~/corsica_data/raw.sqlite")
 
 # Read table
 pbp <- dbReadTable(conn, "pbp")
@@ -67,7 +71,13 @@ pbp %>%
          event_team_last = lag(event_team, 1),
          event_rinkside_last = lag(event_rinkside, 1),
          coords_x_last = lag(coords_x, 1),
-         coords_y_last = lag(coords_y, 1)
+         coords_y_last = lag(coords_y, 1),
+         seconds_since_last2 = game_seconds - lag(game_seconds, 2),
+         event_type_last2 = lag(event_type, 2),
+         event_team_last2 = lag(event_team, 2),
+         event_rinkside_last2 = lag(event_rinkside, 2),
+         coords_x_last2 = lag(coords_x, 2),
+         coords_y_last2 = lag(coords_y, 2)
          ) %>%
   ungroup() %>%
   arrange(season, game_id, event_index) %>%
@@ -100,7 +110,13 @@ pbp %>%
          event_team_last,
          event_rinkside_last,
          coords_x_last,
-         coords_y_last
+         coords_y_last,
+         seconds_since_last2,
+         event_type_last2,
+         event_team_last2,
+         event_rinkside_last2,
+         coords_x_last2,
+         coords_y_last2
          ) %>%
   data.frame() ->
   pbp
@@ -129,6 +145,7 @@ pbp %>%
                                     )
          ) %>%
   mutate(same_team_last = 1*(event_team == event_team_last),
+         same_team_last2 = 1*(event_team == event_team_last2),
          is_home_team = 1*(event_team == home_team),
          is_EN = 1*({event_team == home_team & away_goalie == 0} | {event_team == away_team & home_goalie == 0})
          ) %>%
@@ -152,6 +169,7 @@ model_data <- na.omit(model_data)
 
 # Add distance from previous event
 model_data$distance_from_last <- sqrt((model_data$coords_x - model_data$coords_x_last)^2 + (model_data$coords_y - model_data$coords_y_last)^2)
+model_data$distance_from_last2 <- sqrt((model_data$coords_x - model_data$coords_x_last2)^2 + (model_data$coords_y - model_data$coords_y_last2)^2)
 
 # Add board shots
 model_data$along_boards_2 <- 1*(abs(model_data$coords_y) > 40)
@@ -160,7 +178,7 @@ model_data$along_boards_4 <- 1*(abs(model_data$coords_y) > 38)
 model_data$along_boards_5 <- 1*(abs(model_data$coords_y) > 37)
 
 # Save
-save(list = c("pbp", "model_data"), file = "~/Documents/github/corsica/models/development/xg_testing_data.RData")
+save(list = c("pbp", "model_data"), file = "/srv/shiny-server/models/development/xg_testing_data.RData")
 
 
 ## Averages
@@ -326,47 +344,104 @@ foreach(i = 1:4, .combine = "rbind") %do% {
 # LL1 (ALL) = 0.2378588727 || LL2 (ALL) = 0.6052891319
 # Model V4 (folds = 4, nlambda = 100, alpha = 1, vars = 10, interactions = 3, degree = 3/2)
 # LL1 (ALL) = 0.2109291 || LL2 (ALL) = 0.585791 || LL1 (5v5) = 0.1877815 || LL2 (5v5) = 0.586289 || LL1 (NEN) = 0.2058594 || LL2 (NEN) = 0.5851544
-# Model V4 (folds = 4, nlambda = 100, alpha = 1, vars = 10, interactions = 3, degree = 3/0 ** RAW POLYNOMIALS **)
-# LL1 (ALL) =  || LL2 (ALL) =  || LL1 (5v5) =  || LL2 (5v5) =  || LL1 (NEN) =  || LL2 (NEN) = 
 
-# Neural network
-foreach(i = 1:4, .combine = "rbind") %do% {
+
+# XGBoost
+model_data$is_goal <- 1*(model_data$event_type == "GOAL")
+model_data$is_save <- 1*(model_data$event_type == "SHOT")
+model_data$is_miss <- 1*(model_data$event_type == "MISSED_SHOT")
+
+# Feature list
+vars <- c("event_distance",
+          "event_angle",
+          "coords_x",
+          "coords_y",
+          "seconds_since_last",
+          "event_type_last",
+          "coords_x_last",
+          "coords_y_last",
+          "same_team_last",
+          "is_home_team",
+          "is_EN",
+          "shooter_strength_state",
+          "shooter_score_adv",
+          "home_skaters",
+          "away_skaters",
+          "home_score",
+          "away_score",
+          "session",
+          "game_seconds",
+          "distance_from_last"
+          #"event_type_last2",
+          #"coords_x_last2",
+          #"coords_y_last2",
+          #"same_team_last2",
+          #"distance_from_last2"
+          )
+
+foreach(i = 1:10, .combine = rbind) %do% {
+  
+  cat(i, "\n")
   
   seed <- sample(1:nrow(model_data), nrow(model_data)/10, replace = FALSE)
   
   train_data <- model_data[-seed, ]
-  test_data <- model_data[seed, ]
+  testing_data <- model_data[seed, ]
   
-  model_mat <- data.frame(is_goal = model_data$is_goal,
-                          is_save = model_data$is_save,
-                          model.matrix(is_goal ~ .,
-                                       data = model_data[, c("is_goal", vars)]
-                                       )
+  model_mat <- data.frame(outcome = 1*(model_data$is_save) + 2*(model_data$is_goal),
+                          model.matrix(~ .,
+                                       data = model_data[, vars]
+                                       ) %>%
+                            normalize()
                           )
   
-  train_mat <- model_mat[-seed, ]
-  test_mat <- model_mat[seed, ]
+  train_model_mat <- as.matrix(model_mat[-seed, ])
   
-  nn <- neuralnet(paste("is_goal + is_save ~ ",
-                        paste(colnames(train_mat)[-c(1:2)],
-                              collapse = " + "
-                              ),
-                        sep = ""
-                        ),
-                  data = train_mat,
-                  threshold = 1,
-                  stepmax = 300000,
-                  hidden = 6,
-                  lifesign = "full",
-                  lifesign.step = 500
+  inseed <- sample(1:nrow(train_model_mat), nrow(train_model_mat)/10, replace = FALSE)
+  train_mat <- xgb.DMatrix(as.matrix(train_model_mat[-inseed, -1]), label = train_model_mat[-inseed, 1])
+  eval_mat <- xgb.DMatrix(as.matrix(train_model_mat[inseed, -1]), label = train_model_mat[inseed, 1])
+  
+  test_mat <- xgb.DMatrix(as.matrix(model_mat[seed, -1]), label = model_mat$outcome[seed])
+  
+  # Train
+  xg <- xgb.train(data = train_mat,
+                  params = list(eta = 0.05,
+                                max_depth = 6,
+                                subsample = 0.01,
+                                colsample = 0.5,
+                                num_parallel_tree = 2,
+                                objective = "multi:softprob",
+                                eval_metric = "mlogloss",
+                                num_class = 3
+                                ),
+                  nrounds = 500,
+                  watchlist = list(train_error = train_mat,
+                                   test_error = eval_mat
+                                   ),
+                  verbose = 1,
+                  print_every_n = 5,
+                  early_stopping_rounds = 3,
+                  save_period = NULL
                   )
   
-  predicted <- compute(nn,
-                       covariate = test_mat[, -c(1:2)]
-                       )
+  # Predict
+  probs <- predict(xg,
+                   test_mat,
+                   reshape = TRUE
+                   )
   
-  test_data$prob_goal <- as.numeric(predicted$net.result[, 1])
-  test_data$prob_save <- as.numeric(predicted$net.result[, 2])
+  cbind(testing_data,
+        probs
+        ) %>%
+    data.frame() ->
+    newdata
+
+  newdata %>%
+    rename(prob_goal = X3,
+           prob_save = X2
+           ) %>%
+    data.frame() ->
+    test_data
   
   test_data_5 <- filter(test_data, shooter_strength_state == "5v5")
   test_data_nen <- filter(test_data, is_EN == 0)
@@ -432,15 +507,206 @@ foreach(i = 1:4, .combine = "rbind") %do% {
              xog = results$xog
              )
   
-} ->
-  cv_mat
+} -> cv_mat
 
-# Baseline
-# LL1 (ALL) = 0.2378588727 || LL2 (ALL) = 0.6052891319
-# Model V2 (hidden = 6, threshold = 5, vars = 9)
-# LL1 (ALL) = 0.2166397503 || LL2 (ALL) = 0.5878767837 || LL1 (5v5) = 0.1947705423 || LL2 (5v5) = 0.5875631172 || LL1 (NEN) = 0.2121295372 || LL2 (NEN) = 0.5869796322 
-# Model V2 (hidden = 6, threshold = 10, vars = 9)
-# LL1 (ALL) =  || LL2 (ALL) =  || LL1 (5v5) =  || LL2 (5v5) =  || LL1 (NEN) =  || LL2 (NEN) =  
+cv_mat %>%
+  colMeans()
+# Model parameters: (eta = 0.05, nrounds = 500, subsample = 0.01, colsample = 0.5, max_depth = 6, patience = 3)
+# LL1 (ALL) = 0.21094538 || LL2 (ALL) = 0.58473009 || LL1 (5v5) = 0.19100468 || LL2 (5v5) = 0.58523646 || LL1 (NEN) = 0.20817551 || LL2 (NEN) = 0.58432983
+
+
+# TensorFlow
+model_data$is_goal <- 1*(model_data$event_type == "GOAL")
+model_data$is_save <- 1*(model_data$event_type == "SHOT")
+model_data$is_miss <- 1*(model_data$event_type == "MISSED_SHOT")
+
+# Feature list
+vars <- c("event_distance",
+          "event_angle",
+          "coords_x",
+          "coords_y",
+          "seconds_since_last",
+          "event_type_last",
+          "coords_x_last",
+          "coords_y_last",
+          "same_team_last",
+          "is_home_team",
+          "is_EN",
+          "shooter_strength_state",
+          "shooter_score_adv",
+          "home_skaters",
+          "away_skaters",
+          "home_score",
+          "away_score",
+          "session",
+          "game_seconds",
+          "distance_from_last"
+          #"event_type_last2",
+          #"coords_x_last2",
+          #"coords_y_last2",
+          #"same_team_last2",
+          #"distance_from_last2"
+          )
+
+foreach(i = 1:10, .combine = rbind) %do% {
+  
+  cat(i, "\n")
+  
+  seed <- sample(1:nrow(model_data), nrow(model_data)/10, replace = FALSE)
+  
+  train_data <- model_data[-seed, ]
+  testing_data <- model_data[seed, ]
+  
+  model_mat <- data.frame(is_goal = model_data$is_goal,
+                          is_save = model_data$is_save,
+                          is_miss = model_data$is_miss,
+                          model.matrix(~ .,
+                                       data = model_data[, vars]
+                                       ) %>%
+                            normalize()
+                          )
+  
+  train_mat <- model_mat[-seed, ]
+  test_mat <- model_mat[seed, ]
+  
+  keras_model_sequential() %>%
+    layer_dense(input_shape = ncol(train_mat) - 3, 
+                units = 60
+                ) %>%
+    layer_activation(activation = "relu") %>%
+    layer_dropout(rate = 0.5) %>%
+    layer_dense(units = 60) %>%
+    layer_activation(activation = "relu") %>%
+    layer_dense(units = 3) %>%
+    layer_activity_regularization() %>%
+    layer_activation(activation = "softmax") ->
+    model_seq
+    
+  model_seq %>%
+    compile(loss = "categorical_crossentropy",
+            optimizer = optimizer_sgd(lr = 0.001,
+                                      momentum = 0.9,
+                                      decay = 0.00000001,
+                                      nesterov = TRUE
+                                      ),
+            metrics = "accuracy"
+            )
+    
+  # Train
+  model_seq %>%
+    fit(as.matrix(train_mat[, -c(1:3)]),
+        as.matrix(train_mat[, c(1:3)]),
+        epochs = 500,
+        verbose = 2,
+        batch_size = 100,
+        validation_split = 0.1,
+        callbacks = list(callback_early_stopping(monitor = "val_loss",
+                                                 patience = 30
+                                                 )
+                         )
+        )
+  
+  # Evaluate
+  model_seq %>%
+    evaluate(as.matrix(train_mat[, -c(1:3)]),
+             as.matrix(train_mat[, c(1:3)]),
+             batch_size = 100
+             ) ->
+    eval_metrics
+  
+  cat("\n")
+  
+  # Predict
+  model_seq %>%
+    predict(as.matrix(test_mat[, -c(1:3)]),
+            batch_size = 100
+            ) ->
+    prob_mat
+  
+  cbind(testing_data,
+        prob_mat
+        ) %>%
+    data.frame() ->
+    newdata
+
+  newdata %>%
+    rename(prob_goal = X1,
+           prob_save = X2
+           ) %>%
+    data.frame() ->
+    test_data
+  
+  test_data_5 <- filter(test_data, shooter_strength_state == "5v5")
+  test_data_nen <- filter(test_data, is_EN == 0)
+  
+  LL1_all <- log_loss(as.matrix(test_data$is_goal), as.matrix(test_data$prob_goal))
+  LL2_all <- log_loss(as.matrix(1*(test_data$is_save + test_data$is_goal)), as.matrix(test_data$prob_save + test_data$prob_goal))
+  cat("LL1 (All Situations): ",
+      LL1_all,
+      " || LL2 (All Situations): ",
+      LL2_all,
+      "\n",
+      sep = ""
+      )
+  
+  LL1_5 <- log_loss(as.matrix(test_data_5$is_goal), as.matrix(test_data_5$prob_goal))
+  LL2_5 <- log_loss(as.matrix(1*(test_data_5$is_save + test_data_5$is_goal)), as.matrix(test_data_5$prob_save + test_data_5$prob_goal))
+  cat("LL1 (5-on-5): ",
+      LL1_5,
+      " || LL2 (5-on-5): ",
+      LL2_5,
+      "\n",
+      sep = ""
+      )
+  
+  LL1_nen <- log_loss(as.matrix(test_data_nen$is_goal), as.matrix(test_data_nen$prob_goal))
+  LL2_nen <- log_loss(as.matrix(1*(test_data_nen$is_save + test_data_nen$is_goal)), as.matrix(test_data_nen$prob_save + test_data_nen$prob_goal))
+  cat("LL1 (Non-EN): ",
+      LL1_nen,
+      " || LL2 (Non-EN): ",
+      LL2_nen,
+      "\n",
+      sep = ""
+      )
+  
+  test_data %>%
+    summarise(goals = sum(is_goal),
+              saves = sum(is_save),
+              unblocked = n(),
+              xgoals = sum(prob_goal),
+              xsaves = sum(prob_save)
+              ) %>%
+    mutate(sh = goals/(goals + saves),
+           fsh = goals/unblocked,
+           og = (goals + saves)/unblocked,
+           xsh = xgoals/(xgoals + xsaves),
+           xfsh = xgoals/unblocked,
+           xog = (xgoals + xsaves)/unblocked
+           ) %>%
+    data.frame() ->
+    results
+    
+  data.frame(min_loss = eval_metrics[[1]],
+             ll1_all = LL1_all,
+             ll2_all = LL2_all,
+             ll1_5 = LL1_5,
+             ll2_5 = LL2_5,
+             ll1_nen = LL1_nen,
+             ll2_nen = LL2_nen,
+             sh = results$sh,
+             fsh = results$fsh,
+             og = results$og,
+             xsh = results$xsh,
+             xfsh = results$xfsh,
+             xog = results$xog
+             )
+  
+} -> cv_mat
+
+cv_mat %>%
+  colMeans()
+# Model parameters: (Hidden = 720/120, Activation: relu/relu, dropout: 0.5/0.0, LR: 0.005, Decay = 0.000001, Batch: 250, Patience: 20, Nesterov)
+# LL1 (ALL) = 0.21299467 || LL2 (ALL) = 0.58018038 || LL1 (5v5) = 0.18897504 || LL2 (5v5) = 0.58006057 || LL1 (NEN) = 0.20640512 || LL2 (NEN) = 0.57933122
 
 
 ## Test Results

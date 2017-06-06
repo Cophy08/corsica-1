@@ -1,5 +1,5 @@
-### SCRAPE NEXT DAY ###
-# Last edit: Manny (2017-06-01)
+### PROCESS RAW ###
+# Last edit: Manny (2017-06-06)
 
 
 ## Dependencies
@@ -16,7 +16,7 @@ load("/srv/shiny-server/models/adjustments_model.RData")
 ## Query database
 # Select season
 games <- paste0("20150",
-                ds.all_games[c(1:665)],
+                ds.all_games[-c(1:665)],
                 sep = ""
                 )
 
@@ -60,79 +60,108 @@ bind_rows(
   team_stats_full
 
 ## Compile Skater Stats
-bind_rows(
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_1, game_strength_state) %>%
-    rename(player = home_on_1) %>%
-    st.sum_skater("Home"),
+registerDoMC(cores = 4)
+foreach(frag = c(1:12), .combine = bind_rows) %dopar% {
   
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_2, game_strength_state) %>%
-    rename(player = home_on_2) %>%
-    st.sum_skater("Home"),
+  if(frag == 1) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_1, game_strength_state) %>%
+      rename(player = home_on_1) %>%
+      st.sum_skater("Home")
+    
+  } else if(frag == 2) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_2, game_strength_state) %>%
+      rename(player = home_on_2) %>%
+      st.sum_skater("Home")
+    
+  } else if(frag == 3) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_3, game_strength_state) %>%
+      rename(player = home_on_3) %>%
+      st.sum_skater("Home")
+    
+  } else if(frag == 4) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_4, game_strength_state) %>%
+      rename(player = home_on_4) %>%
+      st.sum_skater("Home")
+    
+  } else if(frag == 5) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_5, game_strength_state) %>%
+      rename(player = home_on_5) %>%
+      st.sum_skater("Home")
+    
+  } else if(frag == 6) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_6, game_strength_state) %>%
+      rename(player = home_on_6) %>%
+      st.sum_skater("Home")
+    
+  } else if(frag == 7) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_1, game_strength_state) %>%
+      rename(player = away_on_1) %>%
+      st.sum_skater("Away")
+    
+  } else if(frag == 8) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_2, game_strength_state) %>%
+      rename(player = away_on_2) %>%
+      st.sum_skater("Away")
+    
+  } else if(frag == 9) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_3, game_strength_state) %>%
+      rename(player = away_on_3) %>%
+      st.sum_skater("Away")
+    
+  } else if(frag == 10) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_4, game_strength_state) %>%
+      rename(player = away_on_4) %>%
+      st.sum_skater("Away")
+    
+  } else if(frag == 11) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_5, game_strength_state) %>%
+      rename(player = away_on_5) %>%
+      st.sum_skater("Away")
+    
+  } else if(frag == 12) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_6, game_strength_state) %>%
+      rename(player = away_on_6) %>%
+      st.sum_skater("Away")
+    
+  }
   
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_3, game_strength_state) %>%
-    rename(player = home_on_3) %>%
-    st.sum_skater("Home"),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_4, game_strength_state) %>%
-    rename(player = home_on_4) %>%
-    st.sum_skater("Home"),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_5, game_strength_state) %>%
-    rename(player = home_on_5) %>%
-    st.sum_skater("Home"),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_6, game_strength_state) %>%
-    rename(player = home_on_6) %>%
-    st.sum_skater("Home"),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_1, game_strength_state) %>%
-    rename(player = away_on_1) %>%
-    st.sum_skater("Away"),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_2, game_strength_state) %>%
-    rename(player = away_on_2) %>%
-    st.sum_skater("Away"),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_3, game_strength_state) %>%
-    rename(player = away_on_3) %>%
-    st.sum_skater("Away"),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_4, game_strength_state) %>%
-    rename(player = away_on_4) %>%
-    st.sum_skater("Away"),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_5, game_strength_state) %>%
-    rename(player = away_on_5) %>%
-    st.sum_skater("Away"),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_6, game_strength_state) %>%
-    rename(player = away_on_6) %>%
-    st.sum_skater("Away")
-) %>%
+} %>%
   data.frame() %>%
   group_by(season, session, game_id, game_date, player, game_strength_state, venue) %>%
   summarise_each(funs(sum), -c(GP)) %>%
@@ -195,187 +224,252 @@ bind_rows(
 
 ## Compile Combos Stats
 # 2 players
-bind_rows(
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_1, home_on_2, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_1, player_2 = home_on_2),
+registerDoMC(cores = 4)
+foreach(frag = c(1:30), .combine = bind_rows) %dopar% {
   
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_1, home_on_3, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_1, player_2 = home_on_3),
+  if(frag == 1) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_1, home_on_2, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_1, player_2 = home_on_2)
+    
+  } else if(frag == 2) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_1, home_on_3, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_1, player_2 = home_on_3)
+    
+  } else if(frag == 3) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_1, home_on_4, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_1, player_2 = home_on_4)
+    
+  } else if(frag == 4) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_1, home_on_5, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_1, player_2 = home_on_5)
+    
+  } else if(frag == 5) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_1, home_on_6, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_1, player_2 = home_on_6)
+    
+  } else if(frag == 6) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_2, home_on_3, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_2, player_2 = home_on_3)
+    
+  } else if(frag == 7) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_2, home_on_4, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_2, player_2 = home_on_4)
+    
+  } else if(frag == 8) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_2, home_on_5, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_2, player_2 = home_on_5)
+    
+  } else if(frag == 9) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_2, home_on_6, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_2, player_2 = home_on_6)
+    
+  } else if(frag == 10) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_3, home_on_4, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_3, player_2 = home_on_4)
+    
+  } else if(frag == 11) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_3, home_on_5, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_3, player_2 = home_on_5)
+    
+  } else if(frag == 12) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_3, home_on_6, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_3, player_2 = home_on_6)
+    
+  } else if(frag == 13) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_4, home_on_5, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_4, player_2 = home_on_5)
+    
+  } else if(frag == 14) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_4, home_on_6, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_4, player_2 = home_on_6)
+    
+  } else if(frag == 15) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_5, home_on_6, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_5, player_2 = home_on_6)
+    
+  } else if(frag == 16) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_1, away_on_2, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_1, player_2 = away_on_2)
+    
+  } else if(frag == 17) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_1, away_on_3, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_1, player_2 = away_on_3)
+    
+  } else if(frag == 18) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_1, away_on_4, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_1, player_2 = away_on_4)
+    
+  } else if(frag == 19) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_1, away_on_5, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_1, player_2 = away_on_5)
+    
+  } else if(frag == 20) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_1, away_on_6, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_1, player_2 = away_on_6)
+    
+  } else if(frag == 21) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_2, away_on_3, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_2, player_2 = away_on_3)
+    
+  } else if(frag == 22) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_2, away_on_4, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_2, player_2 = away_on_4)
+    
+  } else if(frag == 23) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_2, away_on_5, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_2, player_2 = away_on_5)
+    
+  } else if(frag == 24) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_2, away_on_6, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_2, player_2 = away_on_6)
+    
+  } else if(frag == 25) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_3, away_on_4, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_3, player_2 = away_on_4)
+    
+  } else if(frag == 26) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_3, away_on_5, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_3, player_2 = away_on_5)
+    
+  } else if(frag == 27) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_3, away_on_6, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_3, player_2 = away_on_6)
+    
+  } else if(frag == 28) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_4, away_on_5, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_4, player_2 = away_on_5)
+    
+  } else if(frag == 29) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_4, away_on_6, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_4, player_2 = away_on_6)
+    
+  } else if(frag == 30) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_5, away_on_6, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_5, player_2 = away_on_6)
+    
+  }
   
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_1, home_on_4, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_1, player_2 = home_on_4),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_1, home_on_5, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_1, player_2 = home_on_5),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_1, home_on_6, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_1, player_2 = home_on_6),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_2, home_on_3, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_2, player_2 = home_on_3),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_2, home_on_4, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_2, player_2 = home_on_4),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_2, home_on_5, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_2, player_2 = home_on_5),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_2, home_on_6, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_2, player_2 = home_on_6),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_3, home_on_4, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_3, player_2 = home_on_4),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_3, home_on_5, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_3, player_2 = home_on_5),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_3, home_on_6, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_3, player_2 = home_on_6),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_4, home_on_5, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_4, player_2 = home_on_5),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_4, home_on_6, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_4, player_2 = home_on_6),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_5, home_on_6, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_5, player_2 = home_on_6),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_1, away_on_2, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_1, player_2 = away_on_2),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_1, away_on_3, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_1, player_2 = away_on_3),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_1, away_on_4, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_1, player_2 = away_on_4),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_1, away_on_5, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_1, player_2 = away_on_5),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_1, away_on_6, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_1, player_2 = away_on_6),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_2, away_on_3, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_2, player_2 = away_on_3),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_2, away_on_4, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_2, player_2 = away_on_4),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_2, away_on_5, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_2, player_2 = away_on_5),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_2, away_on_6, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_2, player_2 = away_on_6),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_3, away_on_4, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_3, player_2 = away_on_4),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_3, away_on_5, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_3, player_2 = away_on_5),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_3, away_on_6, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_3, player_2 = away_on_6),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_4, away_on_5, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_4, player_2 = away_on_5),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_4, away_on_6, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_4, player_2 = away_on_6),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_5, away_on_6, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_5, player_2 = away_on_6)
-) %>%
+} %>%
   data.frame() %>%
   filter(!is.na(player_1),
          !is.na(player_2)
@@ -425,247 +519,332 @@ bind_rows(
   combo_stats_2
 
 # 3 players
-bind_rows(
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_1, home_on_2, home_on_3, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_1, player_2 = home_on_2, player_3 = home_on_3),
+registerDoMC(cores = 4)
+foreach(frag = c(1:40), .combine = bind_rows) %dopar% {
   
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_1, home_on_2, home_on_4, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_1, player_2 = home_on_2, player_3 = home_on_4),
+  if(frag == 1) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_1, home_on_2, home_on_3, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_1, player_2 = home_on_2, player_3 = home_on_3)
+    
+  } else if(frag == 2) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_1, home_on_2, home_on_4, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_1, player_2 = home_on_2, player_3 = home_on_4)
+    
+  } else if(frag == 3) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_1, home_on_2, home_on_5, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_1, player_2 = home_on_2, player_3 = home_on_5)
+    
+  } else if(frag == 4) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_1, home_on_2, home_on_6, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_1, player_2 = home_on_2, player_3 = home_on_6)
+    
+  } else if(frag == 5) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_1, home_on_3, home_on_4, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_1, player_2 = home_on_3, player_3 = home_on_4)
+    
+  } else if(frag == 6) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_1, home_on_3, home_on_5, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_1, player_2 = home_on_3, player_3 = home_on_5)
+    
+  } else if(frag == 7) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_1, home_on_3, home_on_6, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_1, player_2 = home_on_3, player_3 = home_on_6)
+    
+  } else if(frag == 8) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_1, home_on_4, home_on_5, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_1, player_2 = home_on_4, player_3 = home_on_5)
+    
+  } else if(frag == 9) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_1, home_on_4, home_on_6, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_1, player_2 = home_on_4, player_3 = home_on_6)
+    
+  } else if(frag == 10) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_1, home_on_5, home_on_6, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_1, player_2 = home_on_5, player_3 = home_on_6)
+    
+  } else if(frag == 11) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_2, home_on_3, home_on_4, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_2, player_2 = home_on_3, player_3 = home_on_4)
+    
+  } else if(frag == 12) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_2, home_on_3, home_on_5, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_2, player_2 = home_on_3, player_3 = home_on_5)
+    
+  } else if(frag == 13) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_2, home_on_3, home_on_6, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_2, player_2 = home_on_3, player_3 = home_on_6)
+    
+  } else if(frag == 14) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_2, home_on_4, home_on_5, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_2, player_2 = home_on_4, player_3 = home_on_5)
+    
+  } else if(frag == 15) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_2, home_on_4, home_on_6, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_2, player_2 = home_on_4, player_3 = home_on_6)
+    
+  } else if(frag == 16) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_2, home_on_5, home_on_6, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_2, player_2 = home_on_5, player_3 = home_on_6)
+    
+  } else if(frag == 17) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_3, home_on_4, home_on_5, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_3, player_2 = home_on_4, player_3 = home_on_5)
+    
+  } else if(frag == 18) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_3, home_on_4, home_on_6, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_3, player_2 = home_on_4, player_3 = home_on_6)
+    
+  } else if(frag == 19) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_3, home_on_5, home_on_6, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_3, player_2 = home_on_5, player_3 = home_on_6)
+    
+  } else if(frag == 20) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, home_on_4, home_on_5, home_on_6, game_strength_state) %>%
+      st.sum_team("Home") %>%
+      rename(player_1 = home_on_4, player_2 = home_on_5, player_3 = home_on_6)
+    
+  } else if(frag == 21) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_1, away_on_2, away_on_3, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_1, player_2 = away_on_2, player_3 = away_on_3)
+    
+  } else if(frag == 22) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_1, away_on_2, away_on_4, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_1, player_2 = away_on_2, player_3 = away_on_4)
+    
+  } else if(frag == 23) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_1, away_on_2, away_on_5, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_1, player_2 = away_on_2, player_3 = away_on_5)
+    
+  } else if(frag == 24) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_1, away_on_2, away_on_6, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_1, player_2 = away_on_2, player_3 = away_on_6)
+    
+  } else if(frag == 25) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_1, away_on_3, away_on_4, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_1, player_2 = away_on_3, player_3 = away_on_4)
+    
+  } else if(frag == 26) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_1, away_on_3, away_on_5, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_1, player_2 = away_on_3, player_3 = away_on_5)
+    
+  } else if(frag == 27) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_1, away_on_3, away_on_6, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_1, player_2 = away_on_3, player_3 = away_on_6)
+    
+  } else if(frag == 28) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_1, away_on_4, away_on_5, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_1, player_2 = away_on_4, player_3 = away_on_5)
+    
+  } else if(frag == 29) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_1, away_on_4, away_on_6, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_1, player_2 = away_on_4, player_3 = away_on_6)
+    
+  } else if(frag == 30) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_1, away_on_5, away_on_6, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_1, player_2 = away_on_5, player_3 = away_on_6)
+    
+  } else if(frag == 31) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_2, away_on_3, away_on_4, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_2, player_2 = away_on_3, player_3 = away_on_4)
+    
+  } else if(frag == 32) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_2, away_on_3, away_on_5, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_2, player_2 = away_on_3, player_3 = away_on_5)
+    
+  } else if(frag == 33) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_2, away_on_3, away_on_6, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_2, player_2 = away_on_3, player_3 = away_on_6)
+    
+  } else if(frag == 34) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_2, away_on_4, away_on_5, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_2, player_2 = away_on_4, player_3 = away_on_5)
+    
+  } else if(frag == 35) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_2, away_on_4, away_on_6, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_2, player_2 = away_on_4, player_3 = away_on_6)
+    
+  } else if(frag == 36) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_2, away_on_5, away_on_6, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_2, player_2 = away_on_5, player_3 = away_on_6)
+    
+  } else if(frag == 37) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_3, away_on_4, away_on_5, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_3, player_2 = away_on_4, player_3 = away_on_5)
+    
+  } else if(frag == 38) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_3, away_on_4, away_on_6, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_3, player_2 = away_on_4, player_3 = away_on_6)
+    
+  } else if(frag == 39) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_3, away_on_5, away_on_6, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_3, player_2 = away_on_5, player_3 = away_on_6)
+    
+  } else if(frag == 40) {
+    
+    pbp %>%
+      filter(!{game_period > 4 & session == "R"}) %>%
+      group_by(season, session, game_id, game_date, away_on_4, away_on_5, away_on_6, game_strength_state) %>%
+      st.sum_team("Away") %>%
+      rename(player_1 = away_on_4, player_2 = away_on_5, player_3 = away_on_6)
+    
+  }
   
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_1, home_on_2, home_on_5, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_1, player_2 = home_on_2, player_3 = home_on_5),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_1, home_on_2, home_on_6, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_1, player_2 = home_on_2, player_3 = home_on_6),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_1, home_on_3, home_on_4, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_1, player_2 = home_on_3, player_3 = home_on_4),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_1, home_on_3, home_on_5, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_1, player_2 = home_on_3, player_3 = home_on_5),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_1, home_on_3, home_on_6, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_1, player_2 = home_on_3, player_3 = home_on_6),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_1, home_on_4, home_on_5, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_1, player_2 = home_on_4, player_3 = home_on_5),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_1, home_on_4, home_on_6, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_1, player_2 = home_on_4, player_3 = home_on_6),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_1, home_on_5, home_on_6, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_1, player_2 = home_on_5, player_3 = home_on_6),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_2, home_on_3, home_on_4, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_2, player_2 = home_on_3, player_3 = home_on_4),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_2, home_on_3, home_on_5, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_2, player_2 = home_on_3, player_3 = home_on_5),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_2, home_on_3, home_on_6, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_2, player_2 = home_on_3, player_3 = home_on_6),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_2, home_on_4, home_on_5, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_2, player_2 = home_on_4, player_3 = home_on_5),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_2, home_on_4, home_on_6, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_2, player_2 = home_on_4, player_3 = home_on_6),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_2, home_on_5, home_on_6, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_2, player_2 = home_on_5, player_3 = home_on_6),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_3, home_on_4, home_on_5, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_3, player_2 = home_on_4, player_3 = home_on_5),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_3, home_on_4, home_on_6, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_3, player_2 = home_on_4, player_3 = home_on_6),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_3, home_on_5, home_on_6, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_3, player_2 = home_on_5, player_3 = home_on_6),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, home_on_4, home_on_5, home_on_6, game_strength_state) %>%
-    st.sum_team("Home") %>%
-    rename(player_1 = home_on_4, player_2 = home_on_5, player_3 = home_on_6),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_1, away_on_2, away_on_3, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_1, player_2 = away_on_2, player_3 = away_on_3),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_1, away_on_2, away_on_4, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_1, player_2 = away_on_2, player_3 = away_on_4),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_1, away_on_2, away_on_5, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_1, player_2 = away_on_2, player_3 = away_on_5),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_1, away_on_2, away_on_6, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_1, player_2 = away_on_2, player_3 = away_on_6),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_1, away_on_3, away_on_4, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_1, player_2 = away_on_3, player_3 = away_on_4),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_1, away_on_3, away_on_5, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_1, player_2 = away_on_3, player_3 = away_on_5),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_1, away_on_3, away_on_6, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_1, player_2 = away_on_3, player_3 = away_on_6),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_1, away_on_4, away_on_5, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_1, player_2 = away_on_4, player_3 = away_on_5),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_1, away_on_4, away_on_6, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_1, player_2 = away_on_4, player_3 = away_on_6),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_1, away_on_5, away_on_6, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_1, player_2 = away_on_5, player_3 = away_on_6),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_2, away_on_3, away_on_4, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_2, player_2 = away_on_3, player_3 = away_on_4),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_2, away_on_3, away_on_5, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_2, player_2 = away_on_3, player_3 = away_on_5),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_2, away_on_3, away_on_6, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_2, player_2 = away_on_3, player_3 = away_on_6),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_2, away_on_4, away_on_5, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_2, player_2 = away_on_4, player_3 = away_on_5),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_2, away_on_4, away_on_6, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_2, player_2 = away_on_4, player_3 = away_on_6),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_2, away_on_5, away_on_6, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_2, player_2 = away_on_5, player_3 = away_on_6),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_3, away_on_4, away_on_5, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_3, player_2 = away_on_4, player_3 = away_on_5),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_3, away_on_4, away_on_6, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_3, player_2 = away_on_4, player_3 = away_on_6),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_3, away_on_5, away_on_6, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_3, player_2 = away_on_5, player_3 = away_on_6),
-  
-  pbp %>%
-    filter(!{game_period > 4 & session == "R"}) %>%
-    group_by(season, session, game_id, game_date, away_on_4, away_on_5, away_on_6, game_strength_state) %>%
-    st.sum_team("Away") %>%
-    rename(player_1 = away_on_4, player_2 = away_on_5, player_3 = away_on_6)
-) %>%
+} %>%
   data.frame() %>%
   filter(!is.na(player_1),
          !is.na(player_2),
