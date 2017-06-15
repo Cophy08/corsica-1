@@ -5,11 +5,11 @@
 require(dplyr); require(RSQLite); require(doMC); require(Kmisc); 
 require(survival); require(glmnet); require(caret); require(Matrix);
 require(RCurl); require(rvest); require(rjson)
-load("~/Documents/github/corsica/modules/user_functions.RData")
-load("~/Documents/github/corsica/modules/stats.RData")
-load("~/Documents/github/corsica/modules/dryscrape.RData")
-load("~/Documents/github/corsica/models/xg_model.RData")
-load("~/Documents/github/corsica/models/adjustments_model.RData")
+load("/srv/shiny-server/modules/user_functions.RData")
+load("/srv/shiny-server/modules/stats.RData")
+load("/srv/shiny-server/modules/dryscrape.RData")
+load("/srv/shiny-server/models/xg_model.RData")
+load("/srv/shiny-server/models/adjustments_model.RData")
 
 
 ## Switches
@@ -123,7 +123,7 @@ OR2dProb <- function(OR, prob1) {
 
 ## Load data
 # Connect to database
-conn <- dbConnect(SQLite(), "~/Documents/corsica_data/raw.sqlite")
+conn <- dbConnect(SQLite(), "~/corsica_data/raw.sqlite")
 
 # Query PBP
 pbp_query <- dbSendQuery(conn, paste("SELECT * FROM pbp WHERE season == '",
@@ -1225,58 +1225,25 @@ zones_mat <- cBind(predict(design_zones,
                    away_on_mat
                    )
 
-
-## Save
-save(list = c("player_df",
-              "skater_stats",
-              "baseline_rates",
-              "rates_pbp_home",
-              "rates_mat_home",
-              "rates_pbp_away",
-              "rates_mat_away",
-              "qual_pbp",
-              "qual_mat",
-              "shooting_pbp",
-              "shooting_mat",
-              "pens_df",
-              "pens_mat",
-              "penalty_value",
-              "zones_pbp",
-              "zones_mat",
-              "zones_stats",
-              "faceoff_value",
-              "baseline_pens",
-              "baseline_zones"
-              ),
-     file = paste("~/Documents/corsica_data/war_data_",
-                  season,
-                  ".RData",
-                  sep = ""
-                  )
-     )
-
-
 ########################################################################################################################
 ########################################################################################################################
 ########################################################################################################################
-
-# load("~/Documents/corsica_data/war_data.RData")
 
 ### SHOT RATES ###
 
 ## Home
 home_surv <- Surv(rates_pbp_home$elapsed, rates_pbp_home$home_hazard)
 
-# registerDoMC(cores = 2)
+# registerDoMC(cores = 4)
 cox_home_rates <- cv.glmnet(x = as.matrix(rates_mat_home),
                             y = home_surv,
                             family = "cox",
-                            nfolds = 5,
-                            nlambda = 5,
+                            nfolds = 3,
+                            nlambda = 25,
                             alpha = 1,
                             parallel = FALSE
                             )
-# %Dev = 0.02358
+
 home_rate_coefs <- data.frame(var = colnames(rates_mat_home),
                               coeff = matrix(exp(coef(cox_home_rates, s = "lambda.min")))
                               )
@@ -1284,27 +1251,31 @@ home_rate_coefs <- data.frame(var = colnames(rates_mat_home),
 ## Away
 away_surv <- Surv(rates_pbp_away$elapsed, rates_pbp_away$away_hazard)
 
-# registerDoMC(cores = 2)
+# registerDoMC(cores = 4)
 cox_away_rates <- cv.glmnet(x = as.matrix(rates_mat_away),
                             y = away_surv,
                             family = "cox",
-                            nfolds = 5,
-                            nlambda = 5,
+                            nfolds = 3,
+                            nlambda = 25,
                             alpha = 1,
                             parallel = FALSE
                             )
 
-away_rate_coefs <- matrix(exp(coef(cox_away_rates, s = "lambda.min")))
+away_rate_coefs <- data.frame(var = colnames(rates_mat_away),
+                              coeff = matrix(exp(coef(cox_away_rates, s = "lambda.min")))
+                              )
 
 
 ### SHOT QUALITY ###
 
+# registerDoMC(cores = 4)
 glm_qual <- cv.glmnet(x = as.matrix(qual_mat),
                       y = as.numeric(qual_pbp$prob_goal),
                       family = "gaussian",
                       nfolds = 5,
                       nlambda = 100,
-                      alpha = 1
+                      alpha = 1,
+                      parallel = FALSE
                       )
 
 qual_coefs <- data.frame(var = c("Intercept", colnames(qual_mat)),
@@ -1313,12 +1284,14 @@ qual_coefs <- data.frame(var = c("Intercept", colnames(qual_mat)),
 
 ### SHOOTING ###
 
+# registerDoMC(cores = 4)
 glm_shooting <- cv.glmnet(x = as.matrix(shooting_mat),
                           y = as.factor(shooting_pbp$is_goal),
                           family = "binomial",
                           nfolds = 5,
                           nlambda = 100,
-                          alpha = 1
+                          alpha = 1,
+                          parallel = FALSE
                           )
 
 shooting_coefs <- data.frame(var = c("Intercept", colnames(shooting_mat)),
@@ -1328,26 +1301,30 @@ shooting_coefs <- data.frame(var = c("Intercept", colnames(shooting_mat)),
 
 ### PENALTIES ###
 
+# registerDoMC(cores = 4)
 poiss_taken <- cv.glmnet(x = as.matrix(pens_mat),
                          y = as.numeric(pens_df$PENT),
                          offset = log(as.numeric(pens_df$TOI)),
                          family = "poisson",
                          alpha = 1,
                          nfolds = 5,
-                         nlambda = 50
+                         nlambda = 50,
+                          parallel = FALSE
                          )
 
 taken_coefs <- data.frame(var = c("Intercept", colnames(pens_mat)),
                           coeff = matrix(exp(coef(poiss_taken, s = "lambda.min")))
                           )
 
+# registerDoMC(cores = 4)
 poiss_drawn <- cv.glmnet(x = as.matrix(pens_mat),
                          y = as.numeric(pens_df$PEND),
                          offset = log(as.numeric(pens_df$TOI)),
                          family = "poisson",
                          alpha = 1,
                          nfolds = 5,
-                         nlambda = 50
+                         nlambda = 50,
+                          parallel = FALSE
                          )
 
 drawn_coefs <- data.frame(var = c("Intercept", colnames(pens_mat)),
@@ -1359,12 +1336,14 @@ drawn_coefs <- data.frame(var = c("Intercept", colnames(pens_mat)),
 
 index <- unique(which(is.na(zones_pbp) == TRUE, arr.ind = TRUE)[, 1])
 
+# registerDoMC(cores = 4)
 glm_zones <- cv.glmnet(x = as.matrix(zones_mat[-index, ]),
                        y = as.factor(zones_pbp$home_zonestart_next[-index]),
                        weights = 1/log(zones_pbp$seconds_until[-index] + 1, base = 10),
                        family = "multinomial",
                        alpha = 1,
-                       nfolds = 5
+                       nfolds = 5,
+                       parallel = FALSE
                        )
 
 zones_coefs <- data.frame(var = c("Intercept", colnames(zones_mat)),
@@ -1378,8 +1357,7 @@ zones_coefs <- data.frame(var = c("Intercept", colnames(zones_mat)),
 ########################################################################################################################
 ########################################################################################################################
 
-# load(url("http://fenwicka.com/shiny/war_coefs_20162017.RData"))
-load("~/Documents/github/corsica/models/replacement_coeffs.RData")
+load("/srv/shiny-server/models/replacement_coeffs.RData")
 
 ## Shot rates
 home_rate_coefs %>%
@@ -1575,7 +1553,8 @@ merge(rates_sum %>%
         by.x = c("player_id", "player_name"),
         by.y = c("player_id", "player_name")
         ) %>%
-  mutate(OWAR = WAR_RF + WAR_QF + WAR_Shooting + WAR_PD + WAR_OZF,
+  mutate(season = season,
+         OWAR = WAR_RF + WAR_QF + WAR_Shooting + WAR_PD + WAR_OZF,
          DWAR = WAR_RA + WAR_QA + WAR_PT + WAR_DZF + WAR_NZF,
          WAR = WAR_Rates + WAR_Qual + WAR_Shooting + WAR_Pens + WAR_Zones
          ) %>%
@@ -1585,7 +1564,7 @@ merge(rates_sum %>%
 
 ## Save
 save(list = "war_df",
-     file = paste("~/Documents/corsica_data/war_ratings_",
+     file = paste("~/corsica_data/war_ratings_",
                   season,
                   ".RData",
                   sep = ""

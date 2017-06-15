@@ -13,7 +13,7 @@ load("/srv/shiny-server/modules/stats.RData")
 ## Compile games
 # Scrape
 game_list <- ds.compile_games(games = g,
-                              season = "20142015",
+                              season = "20162017",
                               try_tolerance = 5,
                               agents = ds.user_agents
                               )
