@@ -1,5 +1,5 @@
-### GOALIE WAR ###
-# Last edit: Manny (2017-06-14)
+### GOALIE REPLACEMENTS ###
+# Last edit: Manny (2017-06-23)
 
 ## Dependencies
 require(dplyr); require(RSQLite); require(doMC); require(Kmisc); 
@@ -13,7 +13,7 @@ load("/srv/shiny-server/models/adjustments_model.RData")
 
 
 ## Switches
-season <- "20162017"
+season <- "20122013"
 
 
 ## Functions
@@ -120,6 +120,16 @@ OR2dProb <- function(OR, prob1) {
   
 }
 
+rep_dummy <- function(reps, pbp) {
+  
+  vect <- 1*(as.character(pbp$goalie) %in% reps)
+   
+  vect[which(is.na(vect) == TRUE)] <- 0
+  vect[which(vect > 1)] <- 1
+  
+  return(vect)
+  
+}
 
 ## Load data
 # Connect to database
@@ -137,6 +147,10 @@ pbp <- fetch(pbp_query, -1)
 
 # Disconnect
 dbDisconnect(conn)
+
+# Load replacement players list
+load("/srv/shiny-server/models/replacement_players.RData")
+greps <- as.character(na.omit(replacement_players$player_id[which(replacement_players$position == "G" & replacement_players$season == season)]))
 
 
 ## Prepare data
@@ -255,6 +269,8 @@ goalie_pbp$goalie <- ifelse(goalie_pbp$is_home_team == 1,
                             goalie_pbp$home_goalie
                             )
 
+goalie_pbp$goalie_rep <- 1*(goalie_pbp$goalie %in% greps)
+
 goalie_pbp$shooter_strength_state <- ifelse(goalie_pbp$is_home_team == 1,
                                             goalie_pbp$game_strength_state,
                                             str_rev(goalie_pbp$game_strength_state)
@@ -274,7 +290,7 @@ design_goalie <- dummyVars(as.factor(is_goal) ~
                            shooter_strength_state +
                            is_home_team +
                            shooter_score_adv*game_seconds +
-                           goalie +
+                           goalie_rep +
                            event_player_1 +
                            prob_goal,
                            data = goalie_pbp,
@@ -302,52 +318,32 @@ goalie_coefs <- data.frame(var = c("Intercept", colnames(goalie_mat)),
                            coeff = matrix(exp(coef(glm_goalie, s = "lambda.min")))
                            )
 
-
-########################################################################################################################
-########################################################################################################################
-########################################################################################################################
-
-load("/srv/shiny-server/models/replacement_coeffs.RData")
-
-## Shooting
-goalie_coefs %>%
-  filter(grepl("goalie\\.", var) == TRUE) %>%
-  mutate(player_id = gsub("goalie\\.", "", var),
-         player_name = player_df$player_name[match(player_id, player_df$player_id)]
-         ) %>%
-  data.frame() ->
-  goalie_coefs
-
-goalie_coefs %>%
-  mutate(FA = goalie_stats$FA[match(player_id, goalie_stats$player)],
-         WAR_Goalie = -OR2dProb(coeff, baseline_rates$total_fsh)*FA
-         ) %>%
-  data.frame() ->
-  goalie_sum
-
-
-## WAR
-goalie_sum %>%
-  mutate(season = season,
-         WAR = WAR_Goalie
-         ) %>%
-  data.frame() ->
-  war_df
-
-war_df %>%
-  mutate(WAR_REP = -OR2dProb(1.006514, baseline_rates$total_fsh)*FA,
-         WAR_Goalie = (WAR_Goalie - WAR_REP)/4.5,
-         WAR = WAR_Goalie
-         ) %>%
-  data.frame() ->
-  war_df
-
 ## Save
-save(list = "war_df",
-     file = paste("~/corsica_data/goalie_war_",
+save(list = "goalie_coefs",
+     file = paste("~/corsica_data/goalie_replacement_coefs",
                   season,
                   ".RData",
                   sep = ""
                   )
      )
 
+########################################################################################################################
+########################################################################################################################
+########################################################################################################################
+
+load("~/corsica_data/goalie_replacement_coefs20122013.RData")
+coef1 <- goalie_coefs$coeff[which(goalie_coefs$var == "goalie_rep")]
+
+load("~/corsica_data/goalie_replacement_coefs20132014.RData")
+coef2 <- goalie_coefs$coeff[which(goalie_coefs$var == "goalie_rep")]
+
+load("~/corsica_data/goalie_replacement_coefs20142015.RData")
+coef3 <- goalie_coefs$coeff[which(goalie_coefs$var == "goalie_rep")]
+
+load("~/corsica_data/goalie_replacement_coefs20152016.RData")
+coef4 <- goalie_coefs$coeff[which(goalie_coefs$var == "goalie_rep")]
+
+load("~/corsica_data/goalie_replacement_coefs20162017.RData")
+coef5 <- goalie_coefs$coeff[which(goalie_coefs$var == "goalie_rep")]
+
+mean(c(coef1, coef2, coef3, coef4, coef5))

@@ -13,7 +13,7 @@ load("/srv/shiny-server/models/adjustments_model.RData")
 
 
 ## Switches
-season <- "20162017"
+season <- "20122013"
 
 
 ## Functions
@@ -794,7 +794,7 @@ foreach(i = sort(unique(as.Date(na.omit(newpbp$game_date)))), .combine = "rbind"
 
 ## Save
 save(list = "k_df",
-     file = paste("~/corsica_data/k_ratings_",
+     file = paste("~/corsica_data/k_to_date_",
                   season,
                   ".RData",
                   sep = ""

@@ -15,8 +15,8 @@ load("/srv/shiny-server/models/adjustments_model.RData")
 
 ## Query database
 # Select games
-games <- paste0("20160",
-                ds.all_games[c(1:665)],
+games <- paste0("20120",
+                c(20201:20209, 20211:20400),
                 sep = ""
                 )
 

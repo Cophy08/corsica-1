@@ -120,6 +120,19 @@ OR2dProb <- function(OR, prob1) {
   
 }
 
+player_search <- function(player_id) {
+  
+  pdata <- ds.scrape_player_profile(player_id, try_tolerance = 3, agents = ds.user_agents)
+  
+  pdata %>%
+    select(player_id,
+           player_name_full,
+           player_position
+           ) %>%
+    data.frame()
+  
+}
+
 
 ## Load data
 # Connect to database
@@ -175,13 +188,12 @@ data.frame(player = plist) %>%
   player_df
 
 # Search names
-lapply(as.list(player_df$player), 
-       ds.who
-       ) %>%
-  unlist() ->
-  player_name
-
-player_df$player_name <- player_name
+do.call("rbind",
+        lapply(as.list(player_df$player), 
+               player_search
+               )
+        ) ->
+  player_df
 
 # Baseline rates
 pbp %>%
@@ -925,7 +937,7 @@ bind_rows(
               )
 ) %>%
   data.frame() %>%
-  filter(player %in% player_df$player) %>%
+  filter(player %in% player_df$player_id) %>%
   group_by(game_id, player, venue, game_strength_state, home_score_adv, streak) %>%
   summarise(TOI = sum(TOI),
             PENT = sum(PENT),
@@ -1554,6 +1566,95 @@ merge(rates_sum %>%
         by.y = c("player_id", "player_name")
         ) %>%
   mutate(season = season,
+         OWAR = WAR_RF + WAR_QF + WAR_Shooting + WAR_PD + WAR_OZF,
+         DWAR = WAR_RA + WAR_QA + WAR_PT + WAR_DZF + WAR_NZF,
+         WAR = WAR_Rates + WAR_Qual + WAR_Shooting + WAR_Pens + WAR_Zones
+         ) %>%
+  data.frame() ->
+  war_df
+
+war_df$position <- as.character(player_df$player_position[match(war_df$player_id, player_df$player_id)])
+war_df$position[which(grepl("R|L|C", war_df$position) == TRUE)] <- "F"
+
+bind_rows(war_df %>%
+            filter(position == "F") %>%
+            mutate(HTOI = skater_stats$HTOI[match(player_id, skater_stats$player)],
+                   ATOI = skater_stats$ATOI[match(player_id, skater_stats$player)],
+                   FF = skater_stats$FF[match(player_id, skater_stats$player)],
+                   FA = skater_stats$FA[match(player_id, skater_stats$player)],
+                   iFF = skater_stats$iFF[match(player_id, skater_stats$player)],
+                   TOI = HTOI + ATOI,
+                   HZF = zones_stats$HZF[match(player_id, zones_stats$player)],
+                   AZF = zones_stats$AZF[match(player_id, zones_stats$player)],
+                   REP_RF = (rep_coefs_summary$f_home_rate_for - 1)*baseline_rates$home_rate*HTOI*baseline_rates$home_fsh + 
+                            (rep_coefs_summary$f_away_rate_for - 1)*baseline_rates$away_rate*ATOI*baseline_rates$away_fsh,
+                   REP_RA = (1 - rep_coefs_summary$f_home_rate_aga)*baseline_rates$away_rate*HTOI*baseline_rates$away_fsh + 
+                            (1 - rep_coefs_summary$f_away_rate_aga)*baseline_rates$home_rate*ATOI*baseline_rates$home_fsh,
+                   REP_Rates = REP_RF + REP_RA,
+                   REP_QF = rep_coefs_summary$f_qual_for*FF,
+                   REP_QA = -rep_coefs_summary$f_qual_aga*FA,
+                   REP_Qual = REP_QF + REP_QA,
+                   REP_Shooting = OR2dProb(rep_coefs_summary$f_shooting, baseline_rates$total_fsh)*iFF,
+                   REP_PT = (1 - rep_coefs_summary$f_taken)*baseline_pens$penalty_rate*TOI*penalty_value,
+                   REP_PD = (rep_coefs_summary$f_drawn - 1)*baseline_pens$penalty_rate*TOI*penalty_value,
+                   REP_Pens = REP_PT + REP_PD,
+                   REP_DZF = OR2dProb(rep_coefs_summary$f_home_dz, baseline_zones$pct_1)*HZF*faceoff_value$value[which(faceoff_value$home_zonestart == 1)] -
+                             OR2dProb(rep_coefs_summary$f_away_dz, baseline_zones$pct_3)*AZF*faceoff_value$value[which(faceoff_value$home_zonestart == 3)],
+                   REP_NZF = OR2dProb(rep_coefs_summary$f_home_nz, baseline_zones$pct_2)*HZF*faceoff_value$value[which(faceoff_value$home_zonestart == 2)] -
+                             OR2dProb(rep_coefs_summary$f_away_nz, baseline_zones$pct_2)*AZF*faceoff_value$value[which(faceoff_value$home_zonestart == 2)],
+                   REP_OZF = OR2dProb(rep_coefs_summary$f_home_oz, baseline_zones$pct_3)*HZF*faceoff_value$value[which(faceoff_value$home_zonestart == 3)] -
+                             OR2dProb(rep_coefs_summary$f_away_oz, baseline_zones$pct_1)*AZF*faceoff_value$value[which(faceoff_value$home_zonestart == 1)],
+                   REP_Zones = REP_DZF + REP_NZF + REP_OZF
+                   ) %>%
+            data.frame(),
+          
+          war_df %>%
+            filter(position == "D") %>%
+            mutate(HTOI = skater_stats$HTOI[match(player_id, skater_stats$player)],
+                   ATOI = skater_stats$ATOI[match(player_id, skater_stats$player)],
+                   FF = skater_stats$FF[match(player_id, skater_stats$player)],
+                   FA = skater_stats$FA[match(player_id, skater_stats$player)],
+                   iFF = skater_stats$iFF[match(player_id, skater_stats$player)],
+                   TOI = HTOI + ATOI,
+                   HZF = zones_stats$HZF[match(player_id, zones_stats$player)],
+                   AZF = zones_stats$AZF[match(player_id, zones_stats$player)],
+                   REP_RF = (rep_coefs_summary$d_home_rate_for - 1)*baseline_rates$home_rate*HTOI*baseline_rates$home_fsh + 
+                            (rep_coefs_summary$d_away_rate_for - 1)*baseline_rates$away_rate*ATOI*baseline_rates$away_fsh,
+                   REP_RA = (1 - rep_coefs_summary$d_home_rate_aga)*baseline_rates$away_rate*HTOI*baseline_rates$away_fsh + 
+                            (1 - rep_coefs_summary$d_away_rate_aga)*baseline_rates$home_rate*ATOI*baseline_rates$home_fsh,
+                   REP_Rates = REP_RF + REP_RA,
+                   REP_QF = rep_coefs_summary$d_qual_for*FF,
+                   REP_QA = -rep_coefs_summary$d_qual_aga*FA,
+                   REP_Qual = REP_QF + REP_QA,
+                   REP_Shooting = OR2dProb(rep_coefs_summary$d_shooting, baseline_rates$total_fsh)*iFF,
+                   REP_PT = (1 - rep_coefs_summary$d_taken)*baseline_pens$penalty_rate*TOI*penalty_value,
+                   REP_PD = (rep_coefs_summary$d_drawn - 1)*baseline_pens$penalty_rate*TOI*penalty_value,
+                   REP_Pens = REP_PT + REP_PD,
+                   REP_DZF = OR2dProb(rep_coefs_summary$d_home_dz, baseline_zones$pct_1)*HZF*faceoff_value$value[which(faceoff_value$home_zonestart == 1)] -
+                             OR2dProb(rep_coefs_summary$d_away_dz, baseline_zones$pct_3)*AZF*faceoff_value$value[which(faceoff_value$home_zonestart == 3)],
+                   REP_NZF = OR2dProb(rep_coefs_summary$d_home_nz, baseline_zones$pct_2)*HZF*faceoff_value$value[which(faceoff_value$home_zonestart == 2)] -
+                             OR2dProb(rep_coefs_summary$d_away_nz, baseline_zones$pct_2)*AZF*faceoff_value$value[which(faceoff_value$home_zonestart == 2)],
+                   REP_OZF = OR2dProb(rep_coefs_summary$d_home_oz, baseline_zones$pct_3)*HZF*faceoff_value$value[which(faceoff_value$home_zonestart == 3)] -
+                             OR2dProb(rep_coefs_summary$d_away_oz, baseline_zones$pct_1)*AZF*faceoff_value$value[which(faceoff_value$home_zonestart == 1)],
+                   REP_Zones = REP_DZF + REP_NZF + REP_OZF
+                   ) %>%
+            data.frame()
+          ) %>%
+  data.frame() %>%
+  mutate(WAR_RF = (WAR_RF - REP_RF)/4.5,
+         WAR_RA = (WAR_RA - REP_RA)/4.5,
+         WAR_Rates = WAR_RF + WAR_RA,
+         WAR_QF = (WAR_QF - REP_QF)/4.5,
+         WAR_QA = (WAR_QA - REP_QA)/4.5,
+         WAR_Qual = WAR_QF + WAR_QA,
+         WAR_Shooting = (WAR_Shooting - REP_Shooting)/4.5,
+         WAR_PT = (WAR_PT - REP_PT)/4.5,
+         WAR_PD = (WAR_PD - REP_PD)/4.5,
+         WAR_Pens = WAR_PT + WAR_PD,
+         WAR_OZF = (WAR_OZF - REP_OZF)/4.5,
+         WAR_NZF = (WAR_NZF - REP_NZF)/4.5,
+         WAR_DZF = (WAR_DZF - REP_DZF)/4.5,
+         WAR_Zones = WAR_OZF + WAR_NZF + WAR_DZF,
          OWAR = WAR_RF + WAR_QF + WAR_Shooting + WAR_PD + WAR_OZF,
          DWAR = WAR_RA + WAR_QA + WAR_PT + WAR_DZF + WAR_NZF,
          WAR = WAR_Rates + WAR_Qual + WAR_Shooting + WAR_Pens + WAR_Zones

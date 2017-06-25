@@ -925,6 +925,8 @@ ds.compile_games <- function(games, season, try_tolerance = 3, agents = "Mozilla
   shifts$start_seconds = 1200*(nabs(shifts$shift_period) - 1) + ds.seconds_from_ms(shifts$shift_start)
   shifts$end_seconds = 1200*(nabs(shifts$shift_period) - 1) + ds.seconds_from_ms(shifts$shift_end)
   
+  shifts$end_seconds[which(shifts$end_seconds < shifts$start_seconds)] <- shifts$start_seconds[which(shifts$end_seconds < shifts$start_seconds)] + ds.seconds_from_ms(shifts$shift_duration[which(shifts$end_seconds < shifts$start_seconds)])
+  
   bind_rows(
     shifts %>%
       filter(!is.na(shift_duration)) %>%
