@@ -3,17 +3,18 @@
 
 
 ## Dependencies
-require(RCurl); require(rjson); require(dplyr); require(lubridate); require(doMC); require(Kmisc); require(RSQLite)
-load("~/Documents/github/corsica/modules/user_functions.RData")
-load("~/Documents/github/corsica/modules/dryscrape.RData")
-load("~/Documents/github/corsica/modules/stats.RData")
-load("~/Documents/github/corsica/models/xg_model.RData")
-load("~/Documents/github/corsica/models/adjustments_model.RData")
+require(RCurl); require(rjson); require(dplyr); require(lubridate); 
+require(doMC); require(Kmisc); require(RSQLite); require(rvest)
+load("/srv/shiny-server/modules/user_functions.RData")
+load("/srv/shiny-server/modules/dryscrape.RData")
+load("/srv/shiny-server/modules/stats.RData")
+load("/srv/shiny-server/models/xg_model.RData")
+load("/srv/shiny-server/models/adjustments_model.RData")
 
 
 ## Test Scraper
 # Compile games
-game_list <- ds.compile_games(games = 30225:30225,
+game_list <- ds.compile_games(games = 20001:20012,
                               season = "20162017",
                               try_tolerance = 3,
                               agents = ds.user_agents

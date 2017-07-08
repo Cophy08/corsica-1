@@ -13,7 +13,7 @@ load("/srv/shiny-server/models/adjustments_model.RData")
 
 
 ## Switches
-season <- "20122013"
+season <- "20162017"
 
 
 ## Functions
@@ -452,7 +452,7 @@ newpbp %>%
 
 # Build home matrix
 do.call("cbind",
-        lapply(as.list(player_df$player), 
+        lapply(as.list(player_df$player_id), 
                is_on,
                rates_pbp,
                venue = "Home"
@@ -461,11 +461,11 @@ do.call("cbind",
   Matrix(sparse = TRUE) ->
   home_on_mat
 
-colnames(home_on_mat) <- paste(player_df$player, "home", sep = "_")
+colnames(home_on_mat) <- paste(player_df$player_id, "home", sep = "_")
 
 # Build away matrix
 do.call("cbind",
-        lapply(as.list(player_df$player), 
+        lapply(as.list(player_df$player_id), 
                is_on,
                rates_pbp,
                venue = "Away"
@@ -474,7 +474,7 @@ do.call("cbind",
   Matrix(sparse = TRUE) ->
   away_on_mat
 
-colnames(away_on_mat) <- paste(player_df$player, "away", sep = "_")
+colnames(away_on_mat) <- paste(player_df$player_id, "away", sep = "_")
 
 # Build design matrix
 rates_pbp$game_strength_state <- as.factor(rates_pbp$game_strength_state)
@@ -536,7 +536,7 @@ newpbp %>%
 
 # Build for matrix
 do.call("cbind",
-        lapply(as.list(player_df$player), 
+        lapply(as.list(player_df$player_id), 
                is_on2,
                qual_pbp,
                ref = "For"
@@ -545,11 +545,11 @@ do.call("cbind",
   Matrix(sparse = TRUE) ->
   for_on_mat
 
-colnames(for_on_mat) <- paste(player_df$player, "for", sep = "_")
+colnames(for_on_mat) <- paste(player_df$player_id, "for", sep = "_")
 
 # Build against matrix
 do.call("cbind",
-        lapply(as.list(player_df$player), 
+        lapply(as.list(player_df$player_id), 
                is_on2,
                qual_pbp,
                ref = "Against"
@@ -558,7 +558,7 @@ do.call("cbind",
   Matrix(sparse = TRUE) ->
   against_on_mat
 
-colnames(against_on_mat) <- paste(player_df$player, "against", sep = "_")
+colnames(against_on_mat) <- paste(player_df$player_id, "against", sep = "_")
 
 # Build design matrix
 qual_pbp$shooter_strength_state <- ifelse(qual_pbp$is_home_team == 1,
@@ -598,7 +598,7 @@ newpbp %>%
            {is.na(away_goalie) == TRUE & event_team == home_team}
            },
          !is.na(prob_goal),
-         event_player_1 %in% player_df$player
+         event_player_1 %in% player_df$player_id
          ) %>%
   mutate(is_home_team = 1*(event_team == home_team)) %>%
   data.frame() ->
@@ -626,7 +626,7 @@ shooting_pbp$goalie <- as.factor(shooting_pbp$goalie)
 shooting_pbp$is_goal <- as.factor(1 + 1*(shooting_pbp$event_type == "GOAL"))
 
 do.call("cbind",
-        lapply(as.list(player_df$player), 
+        lapply(as.list(player_df$player_id), 
                player_dummy,
                shooting_pbp,
                type = "shooting"
@@ -635,7 +635,7 @@ do.call("cbind",
   Matrix(sparse = TRUE) ->
   shooter_mat
 
-colnames(shooter_mat) <- paste("event_player_1", player_df$player, sep = ".")
+colnames(shooter_mat) <- paste("event_player_1", player_df$player_id, sep = ".")
 
 design_shooting <- dummyVars(as.factor(is_goal) ~
                              shooter_strength_state +
@@ -977,7 +977,7 @@ pens_df$strength_state <- as.factor(pens_df$strength_state)
 pens_df$player <- as.factor(pens_df$player)
 
 do.call("cbind",
-        lapply(as.list(player_df$player), 
+        lapply(as.list(player_df$player_id), 
                player_dummy,
                pens_df,
                type = "pens"
@@ -986,7 +986,7 @@ do.call("cbind",
   Matrix(sparse = TRUE) ->
   pens_player_mat
 
-colnames(pens_player_mat) <- paste("player", player_df$player, sep = "_")
+colnames(pens_player_mat) <- paste("player", player_df$player_id, sep = "_")
 
 design_pens <- dummyVars(PENT ~
                          strength_state +
@@ -1191,7 +1191,7 @@ bind_rows(
 
 # Build home matrix
 do.call("cbind",
-        lapply(as.list(player_df$player), 
+        lapply(as.list(player_df$player_id), 
                is_on,
                zones_pbp,
                venue = "Home"
@@ -1200,11 +1200,11 @@ do.call("cbind",
   Matrix(sparse = TRUE) ->
   home_on_mat
 
-colnames(home_on_mat) <- paste(player_df$player, "home", sep = "_")
+colnames(home_on_mat) <- paste(player_df$player_id, "home", sep = "_")
 
 # Build away matrix
 do.call("cbind",
-        lapply(as.list(player_df$player), 
+        lapply(as.list(player_df$player_id), 
                is_on,
                zones_pbp,
                venue = "Away"
@@ -1213,7 +1213,7 @@ do.call("cbind",
   Matrix(sparse = TRUE) ->
   away_on_mat
 
-colnames(away_on_mat) <- paste(player_df$player, "away", sep = "_")
+colnames(away_on_mat) <- paste(player_df$player_id, "away", sep = "_")
 
 # Build design matrix
 zones_pbp$game_strength_state <- as.factor(zones_pbp$game_strength_state)
@@ -1376,7 +1376,7 @@ home_rate_coefs %>%
   filter(grepl("_away|_home", var) == TRUE) %>%
   mutate(player_id = gsub("_away|_home", "", var),
          home = 1*(grepl("_home", var) == TRUE),
-         player_name = player_df$player_name[match(player_id, player_df$player)]
+         player_name = player_df$player_name[match(player_id, player_df$player_id)]
          ) %>%
   data.frame() ->
   home_rate_coefs
@@ -1385,7 +1385,7 @@ away_rate_coefs %>%
   filter(grepl("_away|_home", var) == TRUE) %>%
   mutate(player_id = gsub("_away|_home", "", var),
          away = 1*(grepl("_away", var) == TRUE),
-         player_name = player_df$player_name[match(player_id, player_df$player)]
+         player_name = player_df$player_name[match(player_id, player_df$player_id)]
          ) %>%
   data.frame() ->
   away_rate_coefs
@@ -1429,7 +1429,7 @@ qual_coefs %>%
   filter(grepl("_for|_against", var) == TRUE) %>%
   mutate(player_id = gsub("_for|_against", "", var),
          is_for = 1*(grepl("_for", var) == TRUE),
-         player_name = player_df$player_name[match(player_id, player_df$player)]
+         player_name = player_df$player_name[match(player_id, player_df$player_id)]
          ) %>%
   data.frame() ->
   qual_coefs
@@ -1453,7 +1453,7 @@ shooting_coefs %>%
   filter(grepl("event_player_1\\.|goalie\\.", var) == TRUE) %>%
   mutate(player_id = gsub("event_player_1\\.|goalie\\.", "", var),
          is_shooter = 1*(grepl("event_player_1", var) == TRUE),
-         player_name = player_df$player_name[match(player_id, player_df$player)]
+         player_name = player_df$player_name[match(player_id, player_df$player_id)]
          ) %>%
   data.frame() ->
   shooting_coefs
@@ -1472,7 +1472,7 @@ shooting_coefs %>%
 taken_coefs %>%
   filter(grepl("player_", var) == TRUE) %>%
   mutate(player_id = gsub("player_", "", var),
-         player_name = player_df$player_name[match(player_id, player_df$player)]
+         player_name = player_df$player_name[match(player_id, player_df$player_id)]
          ) %>%
   data.frame() ->
   taken_coefs
@@ -1480,7 +1480,7 @@ taken_coefs %>%
 drawn_coefs %>%
   filter(grepl("player_", var) == TRUE) %>%
   mutate(player_id = gsub("player_", "", var),
-         player_name = player_df$player_name[match(player_id, player_df$player)]
+         player_name = player_df$player_name[match(player_id, player_df$player_id)]
          ) %>%
   data.frame() ->
   drawn_coefs
@@ -1509,7 +1509,7 @@ zones_coefs %>%
   filter(grepl("_away|_home", var) == TRUE) %>%
   mutate(player_id = gsub("_away|_home", "", var),
          home = 1*(grepl("_home", var) == TRUE),
-         player_name = player_df$player_name[match(player_id, player_df$player)]
+         player_name = player_df$player_name[match(player_id, player_df$player_id)]
          ) %>%
   data.frame() ->
   zones_coefs

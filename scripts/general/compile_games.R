@@ -1,10 +1,10 @@
 ### COMPILE GAMES ###
-# Last edit: Manny (2017-04-24)
+# Last edit: Manny (2017-07-03)
 
 
 ## Dependencies
 require(RCurl); require(rjson); require(dplyr); require(lubridate); 
-require(doMC); require(Kmisc); require(RSQLite)
+require(doMC); require(Kmisc); require(RSQLite); require(rvest)
 load("/srv/shiny-server/modules/user_functions.RData")
 load("/srv/shiny-server/modules/dryscrape.RData")
 load("/srv/shiny-server/modules/stats.RData")
@@ -12,17 +12,17 @@ load("/srv/shiny-server/modules/stats.RData")
 
 ## Compile games
 # Scrape
-game_list <- ds.compile_games(games = as.character(20001:20200),
-                              season = "20122013",
+game_list <- ds.compile_games(games = as.character(20501:20600),
+                              season = "20112012",
+                              pause = 2,
                               try_tolerance = 5,
                               agents = ds.user_agents
                               )
 
 # Unpack
 pbp <- game_list[[1]]
-shifts <- game_list[[2]]
-highlights <- game_list[[3]]
-media <- game_list[[4]]
+roster <- game_list[[2]]
+shifts <- game_list[[3]]
 
 
 ## Write to database
@@ -40,6 +40,16 @@ pbp %>%
   data.frame() ->
   pbp
 
+roster_contains <- sqliteQuickColumn(conn,
+                                     "roster",
+                                     "game_id"
+                                     )
+
+roster %>%
+  filter(game_id %in% unique(roster_contains) == FALSE) %>%
+  data.frame() ->
+  roster
+
 shifts_contains <- sqliteQuickColumn(conn,
                                      "shifts",
                                      "game_id"
@@ -50,30 +60,17 @@ shifts %>%
   data.frame() ->
   shifts
 
-highlights_contains <- sqliteQuickColumn(conn,
-                                         "highlights",
-                                         "game_id"
-                                         )
-
-highlights %>%
-  filter(game_id %in% unique(highlights_contains) == FALSE) %>%
-  data.frame() ->
-  highlights
-
-media_contains <- sqliteQuickColumn(conn,
-                                    "media",
-                                    "game_id"
-                                    )
-
-media %>%
-  filter(game_id %in% unique(media_contains) == FALSE) %>%
-  data.frame() ->
-  media
-
 # Write
 dbWriteTable(conn,
              "pbp",
              pbp,
+             overwrite = FALSE,
+             append = TRUE
+             )
+
+dbWriteTable(conn,
+             "roster",
+             roster,
              overwrite = FALSE,
              append = TRUE
              )
@@ -85,19 +82,6 @@ dbWriteTable(conn,
              append = TRUE
              )
 
-dbWriteTable(conn,
-             "highlights",
-             highlights,
-             overwrite = FALSE,
-             append = TRUE
-             )
-
-dbWriteTable(conn,
-             "media",
-             media,
-             overwrite = FALSE,
-             append = TRUE
-             )
 
 # Disconnect
 dbDisconnect(conn)
