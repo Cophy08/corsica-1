@@ -1115,7 +1115,21 @@ ds.scrape_game <- function(season, game_id, try_tolerance = 3, agents = "Mozilla
     
     coordinates_df <- ds.get_coordinates(season_, game_id_, source = "espn", date = game_date_, away_team = away_team_, try_tolerance, agents)
     
-    if(is.null(coordinates_df) == TRUE) {
+    if(!is.null(coordinates_df)) {
+      
+      coordinates_df %>%
+        filter(nabs(period) < 5,
+               event_type == "GOAL"
+               ) %>%
+        group_by(seconds) %>%
+        summarise(dupes = n()) %>%
+        filter(dupes > 1) %>%
+        data.frame() ->
+        dupe_check
+      
+    } else {dupe_check <- data.frame()}
+    
+    if(is.null(coordinates_df) == TRUE | nrow(dupe_check) > 0) {
       
       coordinates_df <- ds.get_coordinates(season_, game_id_, source = "nhl", date = game_date_, away_team = away_team_, try_tolerance, agents)
       
@@ -1148,7 +1162,19 @@ ds.scrape_game <- function(season, game_id, try_tolerance = 3, agents = "Mozilla
       coordinates_df$event_type[which(coordinates_df$event_type == "GIVEAWAY")] <- "GIVE"
       coordinates_df$event_type[which(coordinates_df$event_type == "TAKEAWAY")] <- "TAKE"
       coordinates_df$event_type[which(coordinates_df$event_type == "PENALTY")] <- "PENL"
+     
+      coordinates_df %>%
+        filter(nabs(period) < 5,
+               event_type == "GOAL"
+               ) %>%
+        group_by(seconds) %>%
+        summarise(dupes = n()) %>%
+        filter(dupes > 1) %>%
+        data.frame() ->
+        dupe_check
       
+      if(nrow(dupe_check) > 0) {coordinates_df <- NULL}
+       
     }
     
     pbp_raw %>%
@@ -1229,9 +1255,9 @@ ds.scrape_game <- function(season, game_id, try_tolerance = 3, agents = "Mozilla
 
   if(!is.null(roster)) {
     
-    regmatches(as.character(roster[1]), gregexpr("[0-9]+\\\r\\\n[A-Z]+\\\r\\\n[A-Z )(-]+\\\r\\\n", as.character(roster[1]))) %>%
+    regmatches(as.character(roster[1]), gregexpr("[0-9]+(\\\r\\\n|\\\n)[A-Z]+(\\\r\\\n|\\\n)[A-Z )(-]+(\\\r\\\n|\\\n)", as.character(roster[1]))) %>%
       unlist() %>%
-      strsplit("\\\r\\\n") %>%
+      strsplit("(\\\r\\\n|\\\n)") %>%
       unlist() %>%
       matrix(ncol = 3,
              byrow = TRUE
@@ -1551,15 +1577,33 @@ ds.scrape_game <- function(season, game_id, try_tolerance = 3, agents = "Mozilla
   if(!is.null(highlight_df)) {
   
     highlight_df %>%
-      mutate(game_date = game_date_,
-             game_id = game_id_unique,
-             season = as.character(season_),
-             session = session_,
-             home_team = home_team_,
-             away_team = away_team_
+      filter(nabs(event_period) < 5,
+             event_type == 505
              ) %>%
+      group_by(event_id) %>%
+      summarise(dupes = n()) %>%
+      filter(dupes > 1) %>%
       data.frame() ->
-      highlight_df
+      dupe_check
+    
+    if(nrow(dupe_check) > 0) {
+      
+      highlight_df <- NULL
+      
+    } else {
+      
+      highlight_df %>%
+        mutate(game_date = game_date_,
+               game_id = game_id_unique,
+               season = as.character(season_),
+               session = session_,
+               home_team = home_team_,
+               away_team = away_team_
+               ) %>%
+        data.frame() ->
+        highlight_df
+    
+    }
     
   }
   
@@ -1667,16 +1711,14 @@ ds.compile_games <- function(games, season, pause = 1, try_tolerance = 3, agents
                                      "SHOT"
                                      )
     
-    merge(pbp,
-          highlights %>%
-            mutate(game_seconds = 1200*(nabs(event_period) - 1) + nabs(event_seconds)) %>%
-            rename(highlight_code = highlight_id) %>%
-            select(game_id, game_seconds, event_match, highlight_code) %>%
-            data.frame(),
-          by.x = c("game_id", "game_seconds", "event_type"),
-          by.y = c("game_id", "game_seconds", "event_match"),
-          all.x = TRUE
-          ) %>%
+    left_join(pbp,
+              highlights %>%
+                mutate(game_seconds = 1200*(nabs(event_period) - 1) + nabs(event_seconds)) %>%
+                rename(highlight_code = highlight_id) %>%
+                select(game_id, game_seconds, event_match, highlight_code) %>%
+                data.frame(),
+              by = c("game_id" = "game_id", "game_seconds" = "game_seconds", "event_type" = "event_match")
+              ) %>%
       data.frame() ->
       new_pbp
     
@@ -1692,23 +1734,21 @@ ds.compile_games <- function(games, season, pause = 1, try_tolerance = 3, agents
   
   if(!is.null(coords)) {
     
-    merge(new_pbp,
-          coords %>%
-            rename(coords_x = xcoord,
-                   coords_y = ycoord
-                   ) %>%
-            select(game_id, seconds, event_type, coords_x, coords_y) %>%
-            data.frame(),
-          by.x = c("game_id", "game_seconds", "event_type"),
-          by.y = c("game_id", "seconds", "event_type"),
-          all.x = TRUE
-          ) %>%
+    left_join(new_pbp,
+              coords %>%
+                rename(coords_x = xcoord,
+                       coords_y = ycoord
+                       ) %>%
+                select(game_id, seconds, event_type, coords_x, coords_y) %>%
+                data.frame(),
+              by = c("game_id" = "game_id", "game_seconds" = "seconds", "event_type" = "event_type")
+              ) %>%
       data.frame() ->
       new_pbp
     
   } else {
     
-    pbp %>%
+    new_pbp %>%
       mutate(coords_x = NA,
              coords_y = NA
              ) %>%
@@ -1716,6 +1756,12 @@ ds.compile_games <- function(games, season, pause = 1, try_tolerance = 3, agents
       new_pbp
     
   }
+  
+  new_pbp %>%
+    group_by(game_id, game_seconds, event_description) %>%
+    slice(1) %>%
+    data.frame() ->
+    new_pbp
   
   new_pbp$game_period <- nabs(new_pbp$game_period)
   shift_summary$game_period <- nabs(shift_summary$game_period)
@@ -1849,50 +1895,6 @@ ds.compile_games <- function(games, season, pause = 1, try_tolerance = 3, agents
   full_pbp$away_on_6[away_on_df$row] <- away_on_df$away_on_6
   full_pbp$away_goalie[away_on_df$row] <- away_goalie
   
-  full_pbp %>%
-    group_by(game_id) %>%
-    arrange(event_index) %>%
-    mutate(home_skaters = 6 - 1*(is.na(home_on_1) == TRUE) -
-                              1*(is.na(home_on_2) == TRUE) -
-                              1*(is.na(home_on_3) == TRUE) -
-                              1*(is.na(home_on_4) == TRUE) -
-                              1*(is.na(home_on_5) == TRUE) -
-                              1*(is.na(home_on_6) == TRUE) -
-                              1*(!is.na(home_goalie)),
-           away_skaters = 6 - 1*(is.na(away_on_1) == TRUE) -
-                              1*(is.na(away_on_2) == TRUE) -
-                              1*(is.na(away_on_3) == TRUE) -
-                              1*(is.na(away_on_4) == TRUE) -
-                              1*(is.na(away_on_5) == TRUE) -
-                              1*(is.na(away_on_6) == TRUE) -
-                              1*(!is.na(away_goalie)),
-           home_score = cumsum(event_type == "GOAL" & event_team == home_team) - 1*(event_type == "GOAL" & event_team == home_team),
-           away_score = cumsum(event_type == "GOAL" & event_team == away_team) - 1*(event_type == "GOAL" & event_team == away_team),
-           event_length = nabs(lead(game_seconds, 1) - game_seconds)
-           ) %>%
-    ungroup() %>%
-    mutate(game_strength_state = paste(ifelse(is.na(home_goalie) == TRUE,
-                                              "E",
-                                              home_skaters
-                                              ),
-                                       ifelse(is.na(away_goalie) == TRUE,
-                                              "E",
-                                              away_skaters
-                                              ),
-                                       sep = "v"
-                                       ),
-           game_score_state = paste(home_score,
-                                    away_score,
-                                    sep = "v"
-                                    )
-           ) %>%
-    select(one_of(ds.pbp_colnames)) %>%
-    arrange(game_id,
-            event_index
-            ) %>%
-    data.frame() ->
-    full_pbp
-  
   full_pbp$event_player_1 <- roster$player_name[match(paste(full_pbp$game_id, full_pbp$event_player_1, sep = "."), 
                                                       paste(roster$game_id, roster$team_num, sep = ".")
                                                       )
@@ -1961,6 +1963,52 @@ ds.compile_games <- function(games, season, pause = 1, try_tolerance = 3, agents
                                                    paste(roster$game_id, roster$team_num, sep = ".")
                                                    )
                                              ]
+  
+  full_pbp %>%
+    group_by(game_id) %>%
+    arrange(event_index) %>%
+    mutate(home_skaters = 6 - 1*(is.na(home_on_1) == TRUE) -
+                              1*(is.na(home_on_2) == TRUE) -
+                              1*(is.na(home_on_3) == TRUE) -
+                              1*(is.na(home_on_4) == TRUE) -
+                              1*(is.na(home_on_5) == TRUE) -
+                              1*(is.na(home_on_6) == TRUE) -
+                              1*(!is.na(home_goalie)),
+           away_skaters = 6 - 1*(is.na(away_on_1) == TRUE) -
+                              1*(is.na(away_on_2) == TRUE) -
+                              1*(is.na(away_on_3) == TRUE) -
+                              1*(is.na(away_on_4) == TRUE) -
+                              1*(is.na(away_on_5) == TRUE) -
+                              1*(is.na(away_on_6) == TRUE) -
+                              1*(!is.na(away_goalie)),
+           home_score = cumsum(event_type == "GOAL" & event_team == home_team) - 1*(event_type == "GOAL" & event_team == home_team),
+           away_score = cumsum(event_type == "GOAL" & event_team == away_team) - 1*(event_type == "GOAL" & event_team == away_team),
+           event_length = nabs(lead(game_seconds, 1) - game_seconds)
+           ) %>%
+    ungroup() %>%
+    mutate(game_strength_state = paste(ifelse(is.na(home_goalie) == TRUE,
+                                              "E",
+                                              home_skaters
+                                              ),
+                                       ifelse(is.na(away_goalie) == TRUE,
+                                              "E",
+                                              away_skaters
+                                              ),
+                                       sep = "v"
+                                       ),
+           game_score_state = paste(home_score,
+                                    away_score,
+                                    sep = "v"
+                                    )
+           ) %>%
+    select(one_of(ds.pbp_colnames)) %>%
+    arrange(game_id,
+            event_index
+            ) %>%
+    data.frame() ->
+    full_pbp
+  
+  full_pbp$event_team[which(full_pbp$event_team == "PHX")] <- "ARI"
   
   new_game_list <- list(full_pbp,
                         roster,
